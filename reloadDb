@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Replaces the current Druapal db with a new version, and
+# then runs some associated config.
+# 
+# Run with sudo
+# 
+# This script drops the current drupal db
+# and reloads a pre-existing sql file into mysql
+# (unzipping it first if necessary). It then runs 
+# drush updatedb, clears all the caches and configures
+# a few things to aid local development (e.g. disabling
+# the CDN).
+# It should be placed in the elife-vagrant/public folder
+# and run from the VM itself. 
+
+# decompress the db if required
+if [ -f jnl-elife.sql.gz -a ! -f jnl-elife.sql ]; then
+    echo Decompressing zipped database
+    gzip -dc jnl-elife.sql.gz > jnl-elife.sql
+fi
+
+# delete the db and load in a fresh one
+cd ./drupal-webroot
+echo Now in drupal-webroot
+drush sql-drop -y
+echo Please provide the requested mysql credentials
+mysql -u root jnl_elife < ../jnl-elife.sql -p
+
+# boilerplate commands on loading a fresh db
+drush updatedb -y && drush cc all
+drush dis cdn -y
+drush vset preprocess_css 0
+drush vset preprocess_js 0
+drush uli
+
